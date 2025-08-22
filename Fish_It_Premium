@@ -1,1 +1,166 @@
+--[[
+Ultimate Fishing Hub - ULTRA-SAFE FINAL (GitHub Ready)
+Semua fitur digabung, komentar rapi, siap upload
+--]]
 
+-- ========================= LOAD UI =========================
+local Rayfield = loadstring(game:HttpGet("https://raw.githubusercontent.com/GreenCodeHub/Rayfield/main/source.lua"))()
+local Window = Rayfield:CreateWindow({
+    Name = "Ultimate Fishing Hub [GitHub Ready]",
+    LoadingTitle = "Memuat...",
+    LoadingSubtitle = "Sabar ya...",
+    ConfigurationSaving = {Enabled=true, FolderName="UltimateFishingHubGitHub", FileName="Settings"},
+    KeySystem=false
+})
+
+-- ========================= SERVICES =========================
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UIS = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+
+-- ========================= FLAGS =========================
+local Flags = {
+    -- Fishing
+    AutoFishing=false, AutoPerfect=false, AutoAmazing=false, AutoSell=false, SellThreshold=50,
+    -- Player
+    FloatOnWater=false, TradeNoDelay=false, InfinityJump=false, UnlimitedJump=false, WalkSpeed=16,
+    -- Weather
+    AutoBuyWeather={}, SharkHunt=false, AutoSharkHuntEvent=false,
+    -- Event
+    AutoFarmEvent=false, SelectedEvent="",
+}
+
+-- ========================= LOCATIONS =========================
+local Locations = {
+    ["Coral Reefs"]=Vector3.new(-2945,66,2248), ["Kohana"]=Vector3.new(-645,16,606),
+    ["Weather Machine"]=Vector3.new(-1535,2,1917), ["Lost Isle [Sisypuhus]"]=Vector3.new(-3703,-136,-1019),
+    ["Winter Fest"]=Vector3.new(1616,4,3280), ["Esoteric Depths"]=Vector3.new(3214,-1303,1411),
+    ["Tropical Grove"]=Vector3.new(-2047,6,3662), ["Stingray Shores"]=Vector3.new(2,4,2839),
+    ["Lost Isle [Treasure Room]"]=Vector3.new(-3594,-285,-1635), ["Lost Isle [Lost Shore]"]=Vector3.new(-3672,70,-912),
+    ["Kohana Volcano"]=Vector3.new(-512,24,191), ["Crater Island"]=Vector3.new(1019,20,5071)
+}
+
+-- ========================= EVENTS =========================
+local eventList = {
+    ["Shark Hunt"] = Vector3.new(1000,10,1000),
+    ["Snow Event"] = Vector3.new(-500,5,200),
+    ["Wind Event"] = Vector3.new(300,2,-800),
+    ["Radiant Event"] = Vector3.new(1500,0,1200),
+    ["Storm Event"] = Vector3.new(-1000,20,500)
+}
+
+-- ========================= UTILITY FUNCTIONS =========================
+local function teleportToVector(pos)
+    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(pos)
+    end
+end
+
+local function getPlayerList()
+    local t = {}
+    for _, plr in pairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer then table.insert(t, plr.Name) end
+    end
+    return t
+end
+
+-- ========================= UI SETUP =========================
+-- Fishing Tab
+local FishingTab = Window:CreateTab("Fishing",4483362458)
+FishingTab:CreateToggle({Name="Auto Catch & Fishing", CurrentValue=false, Callback=function(Value) Flags.AutoFishing=Value end})
+
+-- Auto Sell Tab
+local AutoSellTab = Window:CreateTab("Auto Sell",4483362458)
+AutoSellTab:CreateToggle({Name="Auto Perfect", CurrentValue=false, Callback=function(Value) Flags.AutoPerfect=Value end})
+AutoSellTab:CreateToggle({Name="Auto Amazing", CurrentValue=false, Callback=function(Value) Flags.AutoAmazing=Value end})
+AutoSellTab:CreateToggle({Name="Auto Sell", CurrentValue=false, Callback=function(Value) Flags.AutoSell=Value end})
+AutoSellTab:CreateSlider({Name="Sell Threshold", Range={0,100}, Increment=1, CurrentValue=50, Callback=function(Value) Flags.SellThreshold=Value end})
+
+-- Player Tab
+local PlayerTab = Window:CreateTab("Player",4483362458)
+PlayerTab:CreateToggle({Name="Float On Water", CurrentValue=false, Callback=function(Value) Flags.FloatOnWater=Value end})
+PlayerTab:CreateToggle({Name="Trade No Delay", CurrentValue=false, Callback=function(Value) Flags.TradeNoDelay=Value end})
+PlayerTab:CreateToggle({Name="Infinity Jump", CurrentValue=false, Callback=function(Value) Flags.InfinityJump=Value end})
+PlayerTab:CreateToggle({Name="Unlimited Jump", CurrentValue=false, Callback=function(Value) Flags.UnlimitedJump=Value end})
+PlayerTab:CreateSlider({Name="Speed Walk", Range={16,200}, Increment=1, CurrentValue=16, Callback=function(Value) Flags.WalkSpeed=Value; if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then LocalPlayer.Character.Humanoid.WalkSpeed=Value end end})
+
+local TeleportDropdown = PlayerTab:CreateDropdown({Name="Teleport To Player", Options=getPlayerList(), MultiSelect=false, Callback=function(Value)
+    local plr = Players:FindFirstChild(Value)
+    if plr and plr.Character then teleportToVector(plr.Character.HumanoidRootPart.Position) end
+end})
+PlayerTab:CreateButton({Name="Refresh Player List", Callback=function() TeleportDropdown:Refresh(getPlayerList()) end})
+
+-- Teleport Tab
+local TeleportTab = Window:CreateTab("Teleport",4483362458)
+TeleportTab:CreateDropdown({Name="Teleport Locations", Options=(function() local t={} for i,v in pairs(Locations) do table.insert(t,i) end return t end)(), MultiSelect=false, Callback=function(Value) teleportToVector(Locations[Value]) end})
+
+-- Weather Tab
+local WeatherTab = Window:CreateTab("Buy Weather",4483362458)
+local WeatherOptions = {"Cloud","Storm","Wind","Radiant","Snow"}
+for _, weather in pairs(WeatherOptions) do
+    Flags.AutoBuyWeather[weather]=false
+    WeatherTab:CreateToggle({Name="Auto Buy "..weather, CurrentValue=false, Callback=function(Value) Flags.AutoBuyWeather[weather]=Value end})
+end
+WeatherTab:CreateToggle({Name="Shark Hunt Spawn", CurrentValue=false, Callback=function(Value) Flags.SharkHunt=Value end})
+
+-- Event Tracker Tab
+local EventTab = Window:CreateTab("Event Tracker",4483362458)
+local EventListUI={}
+local function refreshEventDropdown()
+    local options={}
+    for eventName,_ in pairs(eventList) do table.insert(options,eventName) end
+    if EventListUI.Dropdown then EventListUI.Dropdown:Refresh(options)
+    else EventListUI.Dropdown=EventTab:CreateDropdown({Name="Select Event", Options=options, MultiSelect=false, Callback=function(Value) Flags.SelectedEvent=Value end}) end
+end
+refreshEventDropdown()
+EventTab:CreateButton({Name="Refresh Event List", Callback=refreshEventDropdown})
+EventTab:CreateToggle({Name="Auto Farm Selected Event", CurrentValue=false, Callback=function(Value) Flags.AutoFarmEvent=Value end})
+EventTab:CreateToggle({Name="Auto Shark Hunt Event", CurrentValue=false, Callback=function(Value) Flags.AutoSharkHuntEvent=Value end})
+
+-- Settings Tab
+local SettingsTab = Window:CreateTab("Settings",4483362458)
+SettingsTab:CreateButton({Name="Rejoin Server", Callback=function() game:GetService("TeleportService"):Teleport(game.PlaceId,LocalPlayer) end})
+SettingsTab:CreateToggle({Name="Anti AFK", CurrentValue=false, Callback=function(Value)
+    if Value then local vu=game:GetService("VirtualUser"); LocalPlayer.Idled:Connect(function() vu:Button2Down(Vector2.new(0,0),workspace.CurrentCamera.CFrame) wait(1) vu:Button2Up(Vector2.new(0,0),workspace.CurrentCamera.CFrame) end) end
+end})
+SettingsTab:CreateToggle({Name="Anti Lag / Low Texture", CurrentValue=false, Callback=function(Value)
+    if Value then for _,v in pairs(workspace:GetDescendants()) do if v:IsA("MeshPart") or v:IsA("UnionOperation") or v:IsA("Part") then v.Material=Enum.Material.Plastic; v.TextureID="" end end end
+end})
+SettingsTab:CreateButton({Name="Buy Rod", Callback=function() ReplicatedStorage.Remotes.BuyRod:FireServer() end})
+SettingsTab:CreateButton({Name="Buy Bait", Callback=function() ReplicatedStorage.Remotes.BuyBait:FireServer() end})
+SettingsTab:CreateButton({Name="Spawn Boat", Callback=function() ReplicatedStorage.Remotes.SpawnBoat:FireServer() end})
+
+-- UI Background
+Window:CreateColorPicker({Name="Background Color", Default=Color3.fromRGB(30,30,30), Callback=function(Color) Window.BackgroundColor=Color end})
+Window:CreateSlider({Name="Background Transparency", Range={0,1}, Increment=0.01, CurrentValue=0.5, Callback=function(Value) Window.BackgroundTransparency=Value end})
+
+-- ========================= ULTRA-SAFE LOOP =========================
+spawn(function()
+    while true do
+        -- Fishing
+        if Flags.AutoFishing then pcall(function() ReplicatedStorage.Remotes.FishingEvent:FireServer() end) end
+        -- Auto Sell
+        if Flags.AutoSell then pcall(function() ReplicatedStorage.Remotes.SellFish:FireServer(Flags.SellThreshold, Flags.AutoPerfect, Flags.AutoAmazing) end) end
+        -- Buy Weather
+        for weather,enabled in pairs(Flags.AutoBuyWeather) do if enabled then pcall(function() ReplicatedStorage.Remotes.BuyWeather:FireServer(weather) end) end end
+        -- Shark Hunt
+        if Flags.SharkHunt then pcall(function() ReplicatedStorage.Remotes.WeatherSpawn:FireServer("SharkHunt") end) end
+        -- Auto Shark Hunt Event
+        if Flags.AutoSharkHuntEvent then pcall(function() ReplicatedStorage.Remotes.SharkHuntEvent:FireServer() end) end
+        -- Auto Farm Selected Event
+        if Flags.AutoFarmEvent and Flags.SelectedEvent~="" then
+            local eventPos = eventList[Flags.SelectedEvent]
+            if eventPos then
+                teleportToVector(eventPos)
+                local EventRemote = ReplicatedStorage.Remotes:FindFirstChild(Flags.SelectedEvent.."Event")
+                if EventRemote then pcall(function() EventRemote:FireServer() end) end
+            end
+        end
+        wait(2)
+    end
+end)
+
+-- Infinity Jump
+UIS.InputBegan:Connect(function(input) if Flags.InfinityJump and input.KeyCode==Enum.KeyCode.Space and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then LocalPlayer.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping) end end)
