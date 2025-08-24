@@ -6,10 +6,10 @@ Semua fitur digabung, komentar rapi, siap upload
 -- ========================= LOAD UI =========================
 local Rayfield = loadstring(game:HttpGet("https://raw.githubusercontent.com/GreenCodeHub/Rayfield/main/source.lua"))()
 local Window = Rayfield:CreateWindow({
-    Name = "Ultimate Fishing Hub [GitHub Ready]",
+    Name = "Anthrax Hub [Ready]",
     LoadingTitle = "Memuat...",
     LoadingSubtitle = "Sabar ya...",
-    ConfigurationSaving = {Enabled=true, FolderName="UltimateFishingHubGitHub", FileName="Settings"},
+    ConfigurationSaving = {Enabled=true, FolderName="AnthraxxHub", FileName="Settings"},
     KeySystem=false
 })
 
